@@ -19,4 +19,6 @@ def cribDragging1(ct, keyword):
     
   return [decode_es(ct) for ct in ctlist]
 
-print(cribDragging1(ct2, 'republic'))
+for i, crib in enumerate(cribDragging1(ct3, 'intimate')):
+  if not any([x in crib for x in ['1','2','3','4']]):
+    print(i+1, ':', crib)
