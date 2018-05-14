@@ -3,7 +3,7 @@
 Created on Mon Apr 16 22:55:23 2018
 
 @author: Panangam
-"""
+b"""
 
 charlist = 'abcdefghijklmnopqrstuvwxyz. 1234'
 
