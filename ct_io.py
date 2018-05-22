@@ -29,10 +29,16 @@ def readProjectTwoCTFile(filename):
     return ct_list
   
 def decode_es(ct):
-  return ''.join([charlist[ctchar] for ctchar in ct])
+  return ''.join([c_decode_es(ctchar) for ctchar in ct])
 
 def encode_es(pt):
-  return [charlist.find(character) for character in pt]
+  return [c_encode_es(character) for character in pt]
+
+def c_decode_es(ct_c):
+  return charlist[ct_c]
+
+def c_encode_es(pt_c):
+  return charlist.find(pt_c)
 
 ct_list = readProjectTwoCTFile('ct1.txt')
 ct1 = ct_list[0]
