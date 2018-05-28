@@ -8,6 +8,13 @@ Created on Wed May  2 17:15:59 2018
 from ct_io import encode_es, decode_es, readProjectTwoCTFile
 from ct_io import ct2, ct3
 from ngram_util import bigramfreq, trigramfreq, getTrigramProb, getBigramProb
+from ngram_corpus import getNgramFreqTree
+
+from nltk.util import ngrams
+import math
+
+ngram_length = 4
+ngramtree = getNgramFreqTree(ngram_length)
 
 def cribDragging1(ct, keyword):
   wordlist = encode_es(keyword)
@@ -28,39 +35,13 @@ def testPos(ct, pos, wordlist):
     xor_product = [ct[pos+i]^word_pos for i, word_pos in enumerate(word_code)]
     xor_product_str = decode_es(xor_product)
     if not any([x in xor_product_str for x in ['1','2','3','4','  ','..',' .']]):
-      likelihood = getTrigramProb(xor_product_str)
-      res.append((word, xor_product_str, likelihood))
+      prob = ngramtree.evaluateLogProb(xor_product, ngram_length)/(len(xor_product)-ngram_length)
+      if prob != -inf and not math.isnan(prob) and prob != 0:
+        res.append((word, xor_product_str, prob))
   
   res.sort(key=lambda tup: tup[2], reverse=True)
   
   return res
-
-posList = []
-keywordList = [
-    'corn',
-    'cotton',
-    'coffee',
-    'precious',
-    'metal',
-    'copper',
-    'silver',
-    'platinum',
-    'sold',
-    'sell',
-    'bought',
-    'buy',
-    'raw',
-    'valuable',
-    'energy','oil','gas',
-    'livestock','meat','cattle','republicans',
-    'trading','tariff'
-    ]
-
-politicskeyword = ['Petty','democrat','republican','independent','liberty','democracy','politician','partisan','legislation','law']
-politicsres = []
-
-generic = ['men','they','them','otherwise','but','is','am','are','spoke','history']
-genericres = []
 
 def getLikelihood(phrase):
   freqsum = 0
@@ -76,60 +57,45 @@ def batchCribDrag(ct, word_list):
   res = []
   
   for word in word_list:
-    for i, crib in enumerate(cribDragging1(ct, ' '+word)):
-      if not any([x in crib for x in ['1','2','3','4','  ','..',' .']]):
-        # get freq sum
-        freqsum = getBigramProb(crib)
-        if freqsum > 0:
-            res.append((word, i+2, crib, freqsum))
-        
+    for i, crib in enumerate(cribDragging1(ct, word)):
+      if not any([x in crib for x in ['1','2','3','4']]):
+        # get log prob
+        prob = ngramtree.evaluateLogProb(crib, ngram_length)/(len(crib)-ngram_length)
+        if prob != -inf and not math.isnan(prob) and prob < 0:
+            res.append((word, i, crib, prob))
+  res.sort(key=lambda tup: tup[3], reverse=True)
   return res
 
-def batchCribDragTrigram(ct, word_list):
-  res = []
-  
-  for word in word_list:
-    for i, crib in enumerate(cribDragging1(ct, ' '+word)):
-      if not any([x in crib for x in ['1','2','3','4','  ','..',' .']]):
-        # get freq sum
-        freqsum = getTrigramProb(crib)
-        if freqsum > 0:
-            res.append((word, i+2, crib, freqsum))
-        
-  return res
-
-for word in keywordList:
-  posList.append([])
-  for i, crib in enumerate(cribDragging1(ct2, ' '+word+' ')):
-    if not any([x in crib for x in ['1','2','3','4']]):
-      posList[-1].append((word, ''+str(i+1)+':'+crib))
-      
-for word in politicskeyword:
-  politicsres.append([])
-  for i, crib in enumerate(cribDragging1(ct2, ' '+word+' ')):
-    if not any([x in crib for x in ['1','2','3','4']]):
-      politicsres[-1].append((word, ''+str(i+1)+':'+crib))
-      
-for word in generic:
-  genericres.append([])
-  for i, crib in enumerate(cribDragging1(ct3, ' '+'the law'+' ')):
-    if not any([x in crib for x in ['1','2','3','4']]):
-      genericres[-1].append((word, ''+str(i+1)+':'+crib))
-      
-
-if __name__ == '__main___':
-  
+if __name__ == '__main__': 
+  '''
   with open('5000words.txt') as wordfile:
-    res1 = batchCribDrag(ct3, (line[:-1] for line in wordfile))
-    res1 = sorted(res1, key=lambda tup: tup[3], reverse=True)
+    words = (line[:-1] for line in wordfile)
+    res1 = testPos(ct1, 88, words)
+    res1 = sorted(res1, key=lambda tup: tup[2], reverse=True)
     for thing in res1[:50]:
       print(thing)
-      
   '''
-  with open('t_starting.txt') as wordfile:
-    words = (line[:-1] for line in wordfile)
-    with open('res1.txt', 'w') as outfile:
-      for thing in testPos(ct2, 56, words):
-        outfile.write(str(thing)+'\n')
-        print(thing[1])
-  '''
+  
+  with open('corpus/olympicpool.txt', encoding='utf-8') as fin:
+    fulltext = fin.read()
+    filtered_text = (c.lower() for c in fulltext if re.match('[a-z ]', c.lower()))
+    filtered_text = ''.join(filtered_text).split(' ')
+    text_grams = list(set(' '.join(tup) for tup in ngrams(filtered_text, 3)))
+    
+    '''
+    res2 = batchCribDrag(ct1, text_grams)
+    res2 = sorted(res2, key=lambda tup: tup[3], reverse=True)
+    for thing in res2[:50]:
+      print(thing)
+    '''
+    '''
+    res3 = testPos(ct1, 88, text_grams)
+    print('test')
+    for thing in res3:
+      print(thing)
+    '''
+    res4 = batchCribDrag(ct1[88:276], text_grams)
+    for thing in res4[:50]:
+      print(thing)
+    
+    

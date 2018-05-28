@@ -5,8 +5,8 @@ Created on Thu May 17 20:00:28 2018
 @author: Panangam
 """
 
-from ngram_corpus import getNgramFreq
-from ct_io import ct1, ct2, ct3, ct4, encode_es, decode_es
+from ngram_corpus import getNgramFreqDict, getNgramFreqTree
+from ct_io import ct1, ct2, ct3, ct4, encode_es, decode_es, c_encode_es, c_decode_es
 import numpy as np
 from numpy import log, inf, isneginf
 import logging
@@ -15,26 +15,22 @@ import re
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-#hexagram = getNgramFreq(6)
-unigram = getNgramFreq(1)
-trigram = getNgramFreq(3)
-bigram = getNgramFreq(2)
+trigramTree = getNgramFreqTree(3)
 
-charset = 'abcdefghijklmnopqrstuvwxyz. '
+# work on just ct3
 ct = ct3
-
-# attempting ct3
 stateCount = len(charset)
 obsCount = len(ct)
 
 print('ct length:', obsCount)
 
-# transition is hexagram
-# emissoin is deterministic
+# transition is n-gram
+# emission is deterministic => 1 or 0 based on printable or not
 
-T1 = np.zeros(shape=(stateCount, obsCount))
-T2 = np.zeros(shape=(stateCount, obsCount), dtype=int)
+T1 = np.zeros(shape=(stateCount, obsCount))   # store probability of the most likely path so far
+T2 = np.zeros(shape=(stateCount, obsCount), dtype='uint32') # store previous most likely state in the path
 
+# initialize matrices with first n letters
 print('j: 0')
 for i in range(stateCount):
   T1[i,0] = unigram[charset[i]]
@@ -68,8 +64,8 @@ for j in range(2, obsCount):
     str1List = []
     str2List = []
     for k in range(stateCount):
-      str1 = decode_es([int(T2[k,j-1]), k, i])
-      str2 = decode_es([int(T2[k,j-1])^ct[j-2], k^ct[j-1], i^ct[j]])
+      str1 = decode_es([T2[k,j-1], k, i])
+      str2 = decode_es([T2[k,j-1]^ct[j-2], k^ct[j-1], i^ct[j]])
       str1List.append(str1)
       str2List.append(str2)
       
@@ -84,7 +80,7 @@ for j in range(2, obsCount):
     T2[i,j] = int(np.array(probs).argmax())
     if isneginf(T1[i,j]):
       print(str1List)
-      logger.error('Got -inf prob at j: %d, i: %d, str1: %s, str2: %s' % (j, i, str1List[T2[i,j]], str2[T2[i,j]]))
+      logger.error('Got -inf prob at j: %d, i: %d, str1: %s, str2: %s' % (j, i, str1List[T2[i,j]], str2List[T2[i,j]]))
     
 # backtrack
 print('Backtracking...')
@@ -94,7 +90,7 @@ z[-1] = int(T1[:,-1].argmax())
 X[-1] = charset[z[-1]]
 
 for i in reversed(range(1, obsCount)):
-  z[i-1] = int(T2[z[i],i])
+  z[i-1] = T2[z[i],i]
   X[i-1] = charset[z[i-1]]
   
 print(X)

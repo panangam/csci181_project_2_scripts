@@ -15,6 +15,8 @@ import re
 import json
 import pickle
 import numbers
+from numpy import log
+import math
 
 
 logger = logging.getLogger('__name__')
@@ -50,15 +52,26 @@ class NgramTree(Vividict):
     else:
       branch['f'] += 1
       
+  # receive either string or array gram
   def getGramFreq(self, gram):
     branch = self
     for c in gram:
-      branch = branch[c_encode_es(c)]
+      if isinstance(c, numbers.Number):
+        branch = branch[c]
+      else:
+        branch = branch[c_encode_es(c)]
     if not isinstance(branch['f'], numbers.Number):
       branch['f'] = 0
       return branch['f']
     else:
       return branch['f']
+    
+  def evaluateLogProb(self, phrase, n):
+    prob = -log(self.getGramFreq([phrase[0]])) + log(self.getGramFreq(phrase[:n-1]))
+    for i, c in enumerate(phrase[:-n]):
+      prob += log(self.getGramFreq(phrase[i:i+n])) - log(self.getGramFreq(phrase[i:i+n-1]))
+    return prob
+    
 
 # using just gutenberg for now
 def getNgramFreqTree(n, retrain=False):
