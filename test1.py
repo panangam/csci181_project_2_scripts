@@ -6,12 +6,12 @@ Created on Wed May  2 17:15:59 2018
 """
 
 from ct_io import encode_es, decode_es, readProjectTwoCTFile
-from ct_io import ct2, ct3
+from ct_io import ct1, ct2, ct3, ct4
 from ngram_util import bigramfreq, trigramfreq, getTrigramProb, getBigramProb
 from ngram_corpus import getNgramFreqTree
 
 from nltk.util import ngrams
-import math
+from math import isinf, isnan, inf
 
 ngram_length = 4
 ngramtree = getNgramFreqTree(ngram_length)

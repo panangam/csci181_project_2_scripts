@@ -6,12 +6,13 @@ Created on Wed May  2 17:15:59 2018
 """
 
 from ct_io import encode_es, decode_es, readProjectTwoCTFile
-from ct_io import ct2, ct3
+from ct_io import ct1, ct2, ct3, ct4
 from ngram_util import bigramfreq, trigramfreq, getTrigramProb, getBigramProb
 from ngram_corpus import getNgramFreqTree
+import re
 
 from nltk.util import ngrams
-import math
+from math import isinf, isnan, inf
 
 ngram_length = 4
 ngramtree = getNgramFreqTree(ngram_length)
@@ -36,35 +37,33 @@ def testPos(ct, pos, wordlist):
     xor_product_str = decode_es(xor_product)
     if not any([x in xor_product_str for x in ['1','2','3','4','  ','..',' .']]):
       prob = ngramtree.evaluateLogProb(xor_product, ngram_length)/(len(xor_product)-ngram_length)
-      if prob != -inf and not math.isnan(prob) and prob != 0:
+      if not isinf(prob) and not isnan(prob) and prob < 0:
         res.append((word, xor_product_str, prob))
   
   res.sort(key=lambda tup: tup[2], reverse=True)
   
   return res
 
-def getLikelihood(phrase):
-  freqsum = 0
-  j = 0
-  for k in range(len(phrase)-1):
-    if (phrase[k]!=' ' and phrase[k]!='.' and phrase[k+1]!=' ' and phrase[k+1]!='.'):
-      freqsum += bigramfreq[phrase[k:k+2]]
-      j += 1
-  freqsum /= (j+1)
-  return freqsum
-
+# crib dragging a ct using all words in word_list and ranked according to ngram probs
 def batchCribDrag(ct, word_list):
   res = []
+  wordsCount = len(word_list)
   
-  for word in word_list:
+  for wordnum, word in enumerate(word_list):
     for i, crib in enumerate(cribDragging1(ct, word)):
       if not any([x in crib for x in ['1','2','3','4']]):
         # get log prob
-        prob = ngramtree.evaluateLogProb(crib, ngram_length)/(len(crib)-ngram_length)
-        if prob != -inf and not math.isnan(prob) and prob < 0:
+        prob = ngramtree.evaluateLogProb(crib.translate({'.': None}), ngram_length)
+        if not isinf(prob) and not isnan(prob) and prob < 0:
             res.append((word, i, crib, prob))
   res.sort(key=lambda tup: tup[3], reverse=True)
   return res
+
+def batchCribDragRange(ct, word_list, posStart, posEnd):
+  ct_cut = ct[posStart:posEnd]
+  result = batchCribDrag(ct_cut, word_list)
+  return [(tup[0], tup[1]+posStart, tup[2], tup[3]) for tup in result]
+  
 
 if __name__ == '__main__': 
   '''

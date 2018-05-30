@@ -70,7 +70,7 @@ class NgramTree(Vividict):
     prob = -log(self.getGramFreq([phrase[0]])) + log(self.getGramFreq(phrase[:n-1]))
     for i, c in enumerate(phrase[:-n]):
       prob += log(self.getGramFreq(phrase[i:i+n])) - log(self.getGramFreq(phrase[i:i+n-1]))
-    return prob
+    return prob/(len(phrase)-n)
     
 
 # using just gutenberg for now
